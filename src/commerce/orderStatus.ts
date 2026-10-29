@@ -22,20 +22,133 @@ export type PluginOrderStatus = 'processing' | 'completed' | 'cancelled' | 'refu
 export type StatusHistoryEntry = {
   status: FulfillmentStatus
   at: string
-  note?: string
+  note?: string | null
+  id?: string | null
 }
 
-/** Kitchen / admin may move along this graph (Phase 4 expands actors). */
+/** Kitchen / admin may move along this graph. */
 const KITCHEN_TRANSITIONS: Partial<Record<FulfillmentStatus, FulfillmentStatus[]>> = {
   confirmed: ['preparing', 'cancelled'],
   preparing: ['ready', 'cancelled'],
   ready: ['cancelled'],
 }
 
+/** Payment + release-rider paths that bypass the kitchen graph. */
+const SYSTEM_TRANSITIONS: Partial<Record<FulfillmentStatus, FulfillmentStatus[]>> = {
+  pending_payment: ['confirmed', 'payment_failed'],
+  payment_failed: ['confirmed'],
+  // Release rider: stranded out_for_delivery goes back to ready for re-claim
+  out_for_delivery: ['ready'],
+}
+
 export const canKitchenTransition = (
   from: FulfillmentStatus,
   to: FulfillmentStatus,
 ): boolean => (KITCHEN_TRANSITIONS[from] ?? []).includes(to)
+
+export const canSystemTransition = (
+  from: FulfillmentStatus,
+  to: FulfillmentStatus,
+): boolean => (SYSTEM_TRANSITIONS[from] ?? []).includes(to)
+
+/** Admin may free a rider only while the order is waiting for pickup or en route. */
+export const canReleaseRider = (status: FulfillmentStatus | null | undefined): boolean =>
+  status === 'ready' || status === 'out_for_delivery'
+
+const humanizeStatus = (status: FulfillmentStatus): string => status.replace(/_/g, ' ')
+
+/**
+ * Apply a kitchen/admin status change. Caller persists the returned patch.
+ */
+export const applyKitchenTransition = (
+  order: {
+    fulfillmentStatus?: FulfillmentStatus | null
+    status?: PluginOrderStatus | null
+    statusHistory?: StatusHistoryEntry[] | null
+  },
+  to: FulfillmentStatus,
+  actorName: string,
+): {
+  fulfillmentStatus: FulfillmentStatus
+  status?: PluginOrderStatus
+  statusHistory: StatusHistoryEntry[]
+} => {
+  const from = order.fulfillmentStatus ?? 'pending_payment'
+  if (!canKitchenTransition(from, to)) {
+    throw new Error(
+      `An order that is ${humanizeStatus(from)} cannot be moved to ${humanizeStatus(to)}`,
+    )
+  }
+
+  const patch: {
+    fulfillmentStatus: FulfillmentStatus
+    status?: PluginOrderStatus
+    statusHistory: StatusHistoryEntry[]
+  } = {
+    fulfillmentStatus: to,
+    statusHistory: appendStatusHistory(
+      order.statusHistory,
+      to,
+      `Set to ${humanizeStatus(to)} by ${actorName}`,
+    ),
+  }
+
+  if (to === 'cancelled') {
+    patch.status = 'cancelled'
+  }
+
+  return patch
+}
+
+type DriverSnapshot = {
+  user?: unknown
+  name?: string | null
+  phone?: string | null
+  avatarUrl?: string | null
+  rating?: number | null
+  ratingCount?: number | null
+  location?: { lat?: number | null; lng?: number | null } | null
+  locationUpdatedAt?: string | null
+} | null
+
+/**
+ * Clear the assigned rider and return the order to `ready` for re-claim.
+ */
+export const applyReleaseRider = (
+  order: {
+    fulfillmentStatus?: FulfillmentStatus | null
+    statusHistory?: StatusHistoryEntry[] | null
+    driver?: DriverSnapshot
+  },
+  adminName: string,
+): {
+  driver: null
+  driverPayout: null
+  fulfillmentStatus: 'ready'
+  statusHistory: StatusHistoryEntry[]
+} => {
+  const driverName = order.driver?.name?.trim()
+  const hasDriver = Boolean(order.driver?.user || driverName)
+  if (!hasDriver) {
+    throw new Error('No rider is assigned to this order')
+  }
+
+  if (!canReleaseRider(order.fulfillmentStatus)) {
+    throw new Error('Only an order still on its way can be released')
+  }
+
+  const label = driverName || 'rider'
+  return {
+    driver: null,
+    driverPayout: null,
+    fulfillmentStatus: 'ready',
+    statusHistory: appendStatusHistory(
+      order.statusHistory,
+      'ready',
+      `Released from ${label} by ${adminName}`,
+    ),
+  }
+}
 
 export const appendStatusHistory = (
   history: StatusHistoryEntry[] | null | undefined,

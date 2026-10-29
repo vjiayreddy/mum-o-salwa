@@ -40,17 +40,23 @@ export type {
   LatLng,
   RestaurantFees,
 } from './money'
+export { releaseOrderRider, transitionOrderFulfillment } from './kitchen'
 export { deliveryOrderEndpoints } from './orderEndpoints'
 export { deliveryOrderFields, mapDeliveryOrderFields } from './orderFields'
 export {
   orderAfterChangePaymentSync,
+  orderBeforeChangeFulfillment,
   orderBeforeValidateDefaults,
 } from './orderHooks'
 export {
   appendStatusHistory,
+  applyKitchenTransition,
   applyPaymentFailed,
   applyPaymentSucceeded,
+  applyReleaseRider,
   canKitchenTransition,
+  canReleaseRider,
+  canSystemTransition,
   FULFILLMENT_STATUSES,
   generateOrderReference,
   newDeliveryCode,

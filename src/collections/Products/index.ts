@@ -2,6 +2,7 @@ import { CallToAction } from '@/blocks/CallToAction/config'
 import { Content } from '@/blocks/Content/config'
 import { MediaBlock } from '@/blocks/MediaBlock/config'
 import { slugField } from 'payload'
+import { adminOrRestaurant } from '@/access/restaurantTenants'
 import { generatePreviewPath } from '@/utilities/generatePreviewPath'
 import { CollectionOverride } from '@payloadcms/plugin-ecommerce/types'
 import {
@@ -22,6 +23,13 @@ import { DefaultDocumentIDType, Where } from 'payload'
 
 export const ProductsCollection: CollectionOverride = ({ defaultCollection }) => ({
   ...defaultCollection,
+  access: {
+    ...defaultCollection.access,
+    // Multi-tenant plugin scopes these to the user's restaurant tenants
+    create: adminOrRestaurant,
+    delete: adminOrRestaurant,
+    update: adminOrRestaurant,
+  },
   labels: {
     singular: 'Dish',
     plural: 'Dishes',
