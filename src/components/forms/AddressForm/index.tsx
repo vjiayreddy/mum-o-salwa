@@ -32,11 +32,16 @@ type AddressFormValues = {
   postalCode?: string | null
   country?: string | null
   phone?: string | null
+  label?: 'Home' | 'Work' | 'Other' | null
+  instructions?: string | null
+  isDefault?: boolean | null
 }
 
 type Props = {
   addressID?: Config['db']['defaultIDType']
-  initialData?: Omit<Address, 'country' | 'id' | 'updatedAt' | 'createdAt'> & { country?: string }
+  initialData?: Partial<Omit<Address, 'country' | 'id' | 'updatedAt' | 'createdAt'>> & {
+    country?: string
+  }
   callback?: (data: Partial<Address>) => void
   /**
    * If true, the form will not submit to the API.
@@ -83,6 +88,29 @@ export const AddressForm: React.FC<Props> = ({
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="flex flex-col gap-4 mb-8">
+        <FormItem>
+          <Label htmlFor="label">Label</Label>
+          <Select
+            {...register('label')}
+            onValueChange={(value) => {
+              setValue('label', value as AddressFormValues['label'], { shouldValidate: true })
+            }}
+            defaultValue={initialData?.label || 'Home'}
+          >
+            <SelectTrigger id="label">
+              <SelectValue placeholder="Label" />
+            </SelectTrigger>
+            <SelectContent>
+              {(['Home', 'Work', 'Other'] as const).map((label) => (
+                <SelectItem key={label} value={label}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.label && <FormError message={errors.label.message} />}
+        </FormItem>
+
         <div className="flex flex-col md:flex-row gap-4">
           <FormItem className="shrink">
             <Label htmlFor="title">Title</Label>
@@ -217,6 +245,17 @@ export const AddressForm: React.FC<Props> = ({
             </SelectContent>
           </Select>
           {errors.country && <FormError message={errors.country.message} />}
+        </FormItem>
+
+        <FormItem>
+          <Label htmlFor="instructions">Delivery instructions</Label>
+          <Input id="instructions" {...register('instructions')} />
+          {errors.instructions && <FormError message={errors.instructions.message} />}
+        </FormItem>
+
+        <FormItem className="flex flex-row items-center gap-2">
+          <input id="isDefault" type="checkbox" {...register('isDefault')} className="size-4" />
+          <Label htmlFor="isDefault">Default delivery address</Label>
         </FormItem>
       </div>
 

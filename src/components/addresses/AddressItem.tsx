@@ -39,8 +39,12 @@ export const AddressItem: React.FC<Props> = ({
     <div className="flex items-center">
       <div className="grow">
         <p className="font-medium">
+          {address.label && <span>{address.label} · </span>}
           {address.title && <span>{address.title} </span>}
           {address.firstName} {address.lastName}
+          {address.isDefault ? (
+            <span className="ml-2 text-sm font-normal text-muted-foreground">Default</span>
+          ) : null}
         </p>
         <p>{address.company && <span>{address.company} </span>}</p>
         <p>{address.phone && <span>{address.phone}</span>}</p>
@@ -52,6 +56,9 @@ export const AddressItem: React.FC<Props> = ({
           {address.city}, {address.state} {address.postalCode}
         </p>
         <p>{address.country}</p>
+        {address.instructions ? (
+          <p className="text-sm text-muted-foreground">{address.instructions}</p>
+        ) : null}
       </div>
 
       {!hideActions && address.id && (
