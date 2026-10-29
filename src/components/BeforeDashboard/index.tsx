@@ -16,7 +16,9 @@ export const BeforeDashboard: React.FC = () => {
       <ul className={`${baseClass}__instructions`}>
         <li>
           <SeedButton />
-          {' with a few products and pages to jump-start your new project, then '}
+          {
+            ' with restaurants, dishes, categories, banners, and demo users (password: "password"), then '
+          }
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/">visit your website</a>
           {' to see the results.'}

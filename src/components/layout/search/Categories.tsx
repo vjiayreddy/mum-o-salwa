@@ -3,30 +3,88 @@ import { getPayload } from 'payload'
 import clsx from 'clsx'
 import React, { Suspense } from 'react'
 
-import { FilterList } from './filter'
+import type { Category } from '@/payload-types'
 import { CategoryItem } from './Categories.client'
+
+type CategoryNode = {
+  category: Category
+  children: CategoryNode[]
+}
+
+function buildCategoryTree(docs: Category[]): CategoryNode[] {
+  const byId = new Map<string, CategoryNode>()
+
+  for (const category of docs) {
+    byId.set(String(category.id), { category, children: [] })
+  }
+
+  const roots: CategoryNode[] = []
+
+  for (const category of docs) {
+    const node = byId.get(String(category.id))
+    if (!node) continue
+
+    const parentId =
+      category.parent == null
+        ? null
+        : String(typeof category.parent === 'object' ? category.parent.id : category.parent)
+
+    if (parentId && byId.has(parentId)) {
+      byId.get(parentId)!.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+
+  const sortNodes = (nodes: CategoryNode[]) => {
+    nodes.sort(
+      (a, b) =>
+        (a.category.sortOrder ?? 0) - (b.category.sortOrder ?? 0) ||
+        a.category.title.localeCompare(b.category.title),
+    )
+    for (const child of nodes) sortNodes(child.children)
+  }
+
+  sortNodes(roots)
+  return roots
+}
+
+function CategoryTreeList({ nodes, depth = 0 }: { nodes: CategoryNode[]; depth?: number }) {
+  return (
+    <ul className={depth > 0 ? 'ml-3 border-l border-neutral-200 pl-2 dark:border-neutral-700' : undefined}>
+      {nodes.map((node) => (
+        <li key={node.category.id} className="py-0.5">
+          <CategoryItem category={node.category} />
+          {node.children.length > 0 ? (
+            <CategoryTreeList nodes={node.children} depth={depth + 1} />
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 async function CategoryList() {
   const payload = await getPayload({ config: configPromise })
 
   const categories = await payload.find({
     collection: 'categories',
-    sort: 'title',
+    sort: 'sortOrder',
+    limit: 200,
+    depth: 0,
+    where: {
+      isActive: {
+        equals: true,
+      },
+    },
   })
+
+  const tree = buildCategoryTree(categories.docs)
 
   return (
     <div>
       <h3 className="text-xs mb-2 text-neutral-500 dark:text-neutral-400">Category</h3>
-
-      <ul>
-        {categories.docs.map((category) => {
-          return (
-            <li key={category.id}>
-              <CategoryItem category={category} />
-            </li>
-          )
-        })}
-      </ul>
+      <CategoryTreeList nodes={tree} />
     </div>
   )
 }

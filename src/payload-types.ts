@@ -76,6 +76,7 @@ export interface Config {
     tenants: Tenant;
     pages: Page;
     categories: Category;
+    banners: Banner;
     media: Media;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -98,6 +99,9 @@ export interface Config {
       cart: 'carts';
       addresses: 'addresses';
     };
+    categories: {
+      subcategories: 'categories';
+    };
     variantTypes: {
       options: 'variantOptions';
     };
@@ -110,6 +114,7 @@ export interface Config {
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    banners: BannersSelect<false> | BannersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -133,10 +138,12 @@ export interface Config {
   globals: {
     header: Header;
     footer: Footer;
+    'platform-settings': PlatformSetting;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
+    'platform-settings': PlatformSettingsSelect<false> | PlatformSettingsSelect<true>;
   };
   locale: null;
   widgets: {
@@ -390,6 +397,22 @@ export interface Category {
    */
   generateSlug?: boolean | null;
   slug: string;
+  /**
+   * Leave empty for a top-level (home strip) category. Set to nest under another.
+   */
+  parent?: (string | null) | Category;
+  subcategories?: {
+    docs?: (string | Category)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  image?: (string | null) | Media;
+  /**
+   * Tint behind the category image on the home strip, e.g. #FFE9D6
+   */
+  backgroundColor?: string | null;
+  sortOrder?: number | null;
+  isActive?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -424,6 +447,40 @@ export interface Product {
       }[]
     | null;
   layout?: (CallToActionBlock | ContentBlock | MediaBlock)[] | null;
+  /**
+   * Menu list group: Popular, Mains, Sides, Drinks, …
+   */
+  section: string;
+  isAvailable?: boolean | null;
+  isPopular?: boolean | null;
+  sortOrder?: number | null;
+  calories?: number | null;
+  /**
+   * e.g. Milk, Gluten, Sesame
+   */
+  allergens?: string[] | null;
+  /**
+   * Add-ons and customizations (size, extras, removals). Priced as deltas from the dish base price.
+   */
+  optionGroups?:
+    | {
+        name: string;
+        type: 'single' | 'multiple';
+        required?: boolean | null;
+        options?:
+          | {
+              name: string;
+              /**
+               * Extra cost in minor units (cents)
+               */
+              priceDelta?: number | null;
+              isDefault?: boolean | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
   inventory?: number | null;
   enableVariants?: boolean | null;
   variantTypes?: (string | VariantType)[] | null;
@@ -1099,6 +1156,32 @@ export interface Address {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "banners".
+ */
+export interface Banner {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  image?: (string | null) | Media;
+  /**
+   * Optional category slug to filter by when the customer taps the banner. Empty = artwork only.
+   */
+  categorySlug?: string | null;
+  /**
+   * Optional. Empty = active immediately when isActive.
+   */
+  startsAt?: string | null;
+  /**
+   * Optional. Empty = no end.
+   */
+  endsAt?: string | null;
+  isActive?: boolean | null;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "form-submissions".
  */
 export interface FormSubmission {
@@ -1153,6 +1236,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'categories';
         value: string | Category;
+      } | null)
+    | ({
+        relationTo: 'banners';
+        value: string | Banner;
       } | null)
     | ({
         relationTo: 'media';
@@ -1490,6 +1577,28 @@ export interface CategoriesSelect<T extends boolean = true> {
   title?: T;
   generateSlug?: T;
   slug?: T;
+  parent?: T;
+  subcategories?: T;
+  image?: T;
+  backgroundColor?: T;
+  sortOrder?: T;
+  isActive?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "banners_select".
+ */
+export interface BannersSelect<T extends boolean = true> {
+  title?: T;
+  subtitle?: T;
+  image?: T;
+  categorySlug?: T;
+  startsAt?: T;
+  endsAt?: T;
+  isActive?: T;
+  sortOrder?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1746,6 +1855,28 @@ export interface ProductsSelect<T extends boolean = true> {
         content?: T | ContentBlockSelect<T>;
         mediaBlock?: T | MediaBlockSelect<T>;
       };
+  section?: T;
+  isAvailable?: T;
+  isPopular?: T;
+  sortOrder?: T;
+  calories?: T;
+  allergens?: T;
+  optionGroups?:
+    | T
+    | {
+        name?: T;
+        type?: T;
+        required?: T;
+        options?:
+          | T
+          | {
+              name?: T;
+              priceDelta?: T;
+              isDefault?: T;
+              id?: T;
+            };
+        id?: T;
+      };
   inventory?: T;
   enableVariants?: T;
   variantTypes?: T;
@@ -1964,6 +2095,31 @@ export interface Footer {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "platform-settings".
+ */
+export interface PlatformSetting {
+  id: string;
+  /**
+   * Flat rider pay per delivery in minor units (cents). Default 490 = $4.90
+   */
+  driverBasePay: number;
+  /**
+   * Added per km between pickup and drop-off, in minor units. Default 120 = $1.20
+   */
+  driverPayPerKm: number;
+  /**
+   * Platform share of food subtotal (0.25 = 25%). Tenants may override.
+   */
+  commissionRate: number;
+  /**
+   * Service fee charged to the customer on subtotal (0.05 = 5%).
+   */
+  serviceFeeRate: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header_select".
  */
 export interface HeaderSelect<T extends boolean = true> {
@@ -2004,6 +2160,19 @@ export interface FooterSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "platform-settings_select".
+ */
+export interface PlatformSettingsSelect<T extends boolean = true> {
+  driverBasePay?: T;
+  driverPayPerKm?: T;
+  commissionRate?: T;
+  serviceFeeRate?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
