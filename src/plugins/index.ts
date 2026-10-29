@@ -17,6 +17,14 @@ import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
 import { checkRole } from '@/access/utilities'
+import {
+  addressAfterChange,
+  addressAfterDelete,
+  addressBeforeChange,
+  cartBeforeChangeOneRestaurant,
+  deliveryCartItemFields,
+  deliveryCartItemMatcher,
+} from '@/commerce'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
   return doc?.title ? `${doc.title} | Mum-o-Salwa` : 'Mum-o-Salwa'
@@ -92,6 +100,119 @@ export const plugins: Plugin[] = [
       customerOnlyFieldAccess,
       isAdmin,
       isDocumentOwner,
+    },
+    addresses: {
+      addressesCollectionOverride: ({ defaultCollection }) => ({
+        ...defaultCollection,
+        admin: {
+          ...defaultCollection.admin,
+          group: 'Delivery',
+          hidden: false,
+          useAsTitle: 'label',
+          defaultColumns: ['label', 'addressLine1', 'city', 'isDefault', 'updatedAt'],
+        },
+        fields: [
+          ...defaultCollection.fields,
+          {
+            name: 'label',
+            type: 'select',
+            defaultValue: 'Home',
+            options: [
+              { label: 'Home', value: 'Home' },
+              { label: 'Work', value: 'Work' },
+              { label: 'Other', value: 'Other' },
+            ],
+          },
+          {
+            name: 'instructions',
+            type: 'textarea',
+            maxLength: 200,
+            admin: {
+              description: 'Delivery notes for the rider (buzzer, landmark, …).',
+            },
+          },
+          {
+            name: 'location',
+            type: 'point',
+            label: 'Location',
+            admin: {
+              description: 'Drop-off coordinates [longitude, latitude] for delivery routing.',
+            },
+          },
+          {
+            name: 'isDefault',
+            type: 'checkbox',
+            defaultValue: false,
+            label: 'Default delivery address',
+            admin: {
+              position: 'sidebar',
+            },
+          },
+        ],
+        hooks: {
+          ...defaultCollection.hooks,
+          beforeChange: [
+            ...(defaultCollection.hooks?.beforeChange || []),
+            addressBeforeChange,
+          ],
+          afterChange: [...(defaultCollection.hooks?.afterChange || []), addressAfterChange],
+          afterDelete: [...(defaultCollection.hooks?.afterDelete || []), addressAfterDelete],
+        },
+      }),
+    },
+    carts: {
+      // Merge lines that share product + option ids + note
+      cartItemMatcher: deliveryCartItemMatcher,
+      cartsCollectionOverride: ({ defaultCollection }) => ({
+        ...defaultCollection,
+        admin: {
+          ...defaultCollection.admin,
+          group: 'Delivery',
+        },
+        fields: [
+          ...defaultCollection.fields.map((field) => {
+            if ('name' in field && field.name === 'items' && field.type === 'array') {
+              return {
+                ...field,
+                fields: [...field.fields, ...deliveryCartItemFields],
+              }
+            }
+            return field
+          }),
+          {
+            name: 'tenant',
+            type: 'relationship',
+            relationTo: 'tenants',
+            index: true,
+            admin: {
+              position: 'sidebar',
+              description: 'Restaurant this basket belongs to (one restaurant per cart).',
+              readOnly: true,
+            },
+          },
+          {
+            name: 'includeCutlery',
+            type: 'checkbox',
+            defaultValue: false,
+            label: 'Include cutlery',
+          },
+          {
+            name: 'orderNote',
+            type: 'textarea',
+            maxLength: 300,
+            admin: {
+              description: 'Note for the whole order (allergies, leave at door, …).',
+            },
+          },
+        ],
+        hooks: {
+          ...defaultCollection.hooks,
+          beforeChange: [
+            ...(defaultCollection.hooks?.beforeChange || []),
+            cartBeforeChangeOneRestaurant,
+          ],
+        },
+      }),
     },
     currencies: {
       defaultCurrency: 'USD',

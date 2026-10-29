@@ -1081,6 +1081,22 @@ export interface Cart {
         product?: (string | null) | Product;
         variant?: (string | null) | Variant;
         quantity: number;
+        /**
+         * Selected dish option row IDs (from product.optionGroups.options).
+         */
+        optionIds?: string[] | null;
+        /**
+         * Snapshot of option labels at add-to-cart time.
+         */
+        optionNames?: string[] | null;
+        /**
+         * Per-item kitchen note (e.g. no onions).
+         */
+        note?: string | null;
+        /**
+         * Server-priced unit in minor units (dish base + option deltas).
+         */
+        unitPrice?: number | null;
         id?: string | null;
       }[]
     | null;
@@ -1090,6 +1106,15 @@ export interface Cart {
   status?: ('active' | 'purchased' | 'abandoned') | null;
   subtotal?: number | null;
   currency?: 'USD' | null;
+  /**
+   * Restaurant this basket belongs to (one restaurant per cart).
+   */
+  tenant?: (string | null) | Tenant;
+  includeCutlery?: boolean | null;
+  /**
+   * Note for the whole order (allergies, leave at door, …).
+   */
+  orderNote?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1151,6 +1176,19 @@ export interface Address {
     | 'SE'
     | 'CH';
   phone?: string | null;
+  label?: ('Home' | 'Work' | 'Other') | null;
+  /**
+   * Delivery notes for the rider (buzzer, landmark, …).
+   */
+  instructions?: string | null;
+  /**
+   * Drop-off coordinates [longitude, latitude] for delivery routing.
+   *
+   * @minItems 2
+   * @maxItems 2
+   */
+  location?: [number, number] | null;
+  isDefault?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1789,6 +1827,10 @@ export interface AddressesSelect<T extends boolean = true> {
   postalCode?: T;
   country?: T;
   phone?: T;
+  label?: T;
+  instructions?: T;
+  location?: T;
+  isDefault?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1910,6 +1952,10 @@ export interface CartsSelect<T extends boolean = true> {
         product?: T;
         variant?: T;
         quantity?: T;
+        optionIds?: T;
+        optionNames?: T;
+        note?: T;
+        unitPrice?: T;
         id?: T;
       };
   secret?: T;
@@ -1918,6 +1964,9 @@ export interface CartsSelect<T extends boolean = true> {
   status?: T;
   subtotal?: T;
   currency?: T;
+  tenant?: T;
+  includeCutlery?: T;
+  orderNote?: T;
   updatedAt?: T;
   createdAt?: T;
 }
