@@ -24,6 +24,12 @@ import {
   cartBeforeChangeOneRestaurant,
   deliveryCartItemFields,
   deliveryCartItemMatcher,
+  deliveryOrderEndpoints,
+  deliveryOrderFields,
+  deliveryStripeWebhooks,
+  mapDeliveryOrderFields,
+  orderAfterChangePaymentSync,
+  orderBeforeValidateDefaults,
 } from '@/commerce'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
@@ -225,8 +231,26 @@ export const plugins: Plugin[] = [
     orders: {
       ordersCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
+        admin: {
+          ...defaultCollection.admin,
+          defaultColumns: [
+            'reference',
+            'fulfillmentStatus',
+            'status',
+            'customer',
+            'amount',
+            'createdAt',
+          ],
+          group: 'Delivery',
+          useAsTitle: 'reference',
+        },
+        endpoints: [
+          ...(defaultCollection.endpoints || []),
+          ...deliveryOrderEndpoints,
+        ],
         fields: [
-          ...defaultCollection.fields,
+          ...mapDeliveryOrderFields(defaultCollection.fields),
+          ...deliveryOrderFields,
           {
             name: 'accessToken',
             type: 'text',
@@ -248,6 +272,17 @@ export const plugins: Plugin[] = [
             },
           },
         ],
+        hooks: {
+          ...defaultCollection.hooks,
+          afterChange: [
+            ...(defaultCollection.hooks?.afterChange || []),
+            orderAfterChangePaymentSync,
+          ],
+          beforeValidate: [
+            ...(defaultCollection.hooks?.beforeValidate || []),
+            orderBeforeValidateDefaults,
+          ],
+        },
       }),
     },
     payments: {
@@ -256,6 +291,7 @@ export const plugins: Plugin[] = [
           secretKey: process.env.STRIPE_SECRET_KEY!,
           publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
           webhookSecret: process.env.STRIPE_WEBHOOKS_SIGNING_SECRET!,
+          webhooks: deliveryStripeWebhooks,
         }),
       ],
     },

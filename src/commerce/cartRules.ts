@@ -4,7 +4,7 @@
  */
 
 export type DishOption = {
-  id: string
+  id?: string | null
   name: string
   priceDelta?: number | null
 }

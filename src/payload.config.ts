@@ -19,6 +19,7 @@ import { Banners } from '@/collections/Banners'
 import { Categories } from '@/collections/Categories'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
+import { StripeEvents } from '@/collections/StripeEvents'
 import { Tenants } from '@/collections/Tenants'
 import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
@@ -41,7 +42,7 @@ export default buildConfig({
     },
     user: Users.slug,
   },
-  collections: [Users, Tenants, Pages, Categories, Banners, Media],
+  collections: [Users, Tenants, Pages, Categories, Banners, Media, StripeEvents],
   db: mongooseAdapter({
     url: process.env.DATABASE_URL || '',
   }),

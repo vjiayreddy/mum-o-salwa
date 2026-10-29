@@ -16,6 +16,14 @@ export {
   priceSelection,
 } from './cartRules'
 export {
+  createCheckout,
+  markOrderPaid,
+  markOrderPaymentFailed,
+  reorderFromOrder,
+  syncOrderPayment,
+} from './checkout'
+export type { CheckoutResult, CreateCheckoutInput, ReorderResult } from './checkout'
+export {
   computeBasketTotals,
   computeCommissionSplit,
   computeDriverPayout,
@@ -32,3 +40,24 @@ export type {
   LatLng,
   RestaurantFees,
 } from './money'
+export { deliveryOrderEndpoints } from './orderEndpoints'
+export { deliveryOrderFields, mapDeliveryOrderFields } from './orderFields'
+export {
+  orderAfterChangePaymentSync,
+  orderBeforeValidateDefaults,
+} from './orderHooks'
+export {
+  appendStatusHistory,
+  applyPaymentFailed,
+  applyPaymentSucceeded,
+  canKitchenTransition,
+  FULFILLMENT_STATUSES,
+  generateOrderReference,
+  newDeliveryCode,
+} from './orderStatus'
+export type {
+  FulfillmentStatus,
+  PluginOrderStatus,
+  StatusHistoryEntry,
+} from './orderStatus'
+export { deliveryStripeWebhooks } from './stripeWebhooks'

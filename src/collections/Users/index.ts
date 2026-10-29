@@ -125,13 +125,27 @@ export const Users: CollectionConfig = {
       ],
     },
     {
+      name: 'stripeCustomerId',
+      type: 'text',
+      access: {
+        create: adminOnlyFieldAccess,
+        read: adminOnlyFieldAccess,
+        update: adminOnlyFieldAccess,
+      },
+      admin: {
+        description: 'Stripe Customer id (created lazily at checkout).',
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
       name: 'orders',
       type: 'join',
       collection: 'orders',
       on: 'customer',
       admin: {
         allowCreate: false,
-        defaultColumns: ['id', 'createdAt', 'total', 'currency', 'items'],
+        defaultColumns: ['id', 'reference', 'fulfillmentStatus', 'amount', 'createdAt'],
       },
     },
     {
