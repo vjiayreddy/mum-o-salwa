@@ -22,9 +22,14 @@ import { DefaultDocumentIDType, Where } from 'payload'
 
 export const ProductsCollection: CollectionOverride = ({ defaultCollection }) => ({
   ...defaultCollection,
+  labels: {
+    singular: 'Dish',
+    plural: 'Dishes',
+  },
   admin: {
     ...defaultCollection?.admin,
-    defaultColumns: ['title', 'enableVariants', '_status', 'variants.variants'],
+    group: 'Delivery',
+    defaultColumns: ['title', 'section', 'isAvailable', 'isPopular', '_status'],
     livePreview: {
       url: ({ data, req }) =>
         generatePreviewPath({
@@ -52,9 +57,14 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
     priceInUSD: true,
     inventory: true,
     meta: true,
+    section: true,
+    isAvailable: true,
+    isPopular: true,
+    optionGroups: true,
+    allergens: true,
   },
   fields: [
-    { name: 'title', type: 'text', required: true },
+    { name: 'title', type: 'text', required: true, maxLength: 80 },
     {
       type: 'tabs',
       tabs: [
@@ -131,7 +141,6 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
                 },
               ],
             },
-
             {
               name: 'layout',
               type: 'blocks',
@@ -139,6 +148,137 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
             },
           ],
           label: 'Content',
+        },
+        {
+          label: 'Dish',
+          fields: [
+            {
+              name: 'section',
+              type: 'text',
+              defaultValue: 'Popular',
+              maxLength: 40,
+              required: true,
+              admin: {
+                description: 'Menu list group: Popular, Mains, Sides, Drinks, …',
+              },
+            },
+            {
+              type: 'row',
+              fields: [
+                {
+                  name: 'isAvailable',
+                  type: 'checkbox',
+                  defaultValue: true,
+                  admin: { width: '33%' },
+                },
+                {
+                  name: 'isPopular',
+                  type: 'checkbox',
+                  defaultValue: false,
+                  admin: { width: '33%' },
+                },
+                {
+                  name: 'sortOrder',
+                  type: 'number',
+                  defaultValue: 0,
+                  admin: { width: '33%' },
+                },
+              ],
+            },
+            {
+              name: 'calories',
+              type: 'number',
+              min: 0,
+            },
+            {
+              name: 'allergens',
+              type: 'text',
+              hasMany: true,
+              admin: {
+                description: 'e.g. Milk, Gluten, Sesame',
+              },
+            },
+            {
+              name: 'optionGroups',
+              type: 'array',
+              labels: {
+                singular: 'Option Group',
+                plural: 'Option Groups',
+              },
+              admin: {
+                description:
+                  'Add-ons and customizations (size, extras, removals). Priced as deltas from the dish base price.',
+              },
+              fields: [
+                {
+                  name: 'name',
+                  type: 'text',
+                  required: true,
+                  maxLength: 60,
+                },
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'type',
+                      type: 'select',
+                      required: true,
+                      defaultValue: 'single',
+                      options: [
+                        { label: 'Single (radio)', value: 'single' },
+                        { label: 'Multiple (checkbox)', value: 'multiple' },
+                      ],
+                      admin: { width: '50%' },
+                    },
+                    {
+                      name: 'required',
+                      type: 'checkbox',
+                      defaultValue: false,
+                      admin: { width: '50%' },
+                    },
+                  ],
+                },
+                {
+                  name: 'options',
+                  type: 'array',
+                  minRows: 1,
+                  labels: {
+                    singular: 'Option',
+                    plural: 'Options',
+                  },
+                  fields: [
+                    {
+                      name: 'name',
+                      type: 'text',
+                      required: true,
+                      maxLength: 60,
+                    },
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'priceDelta',
+                          type: 'number',
+                          defaultValue: 0,
+                          min: 0,
+                          admin: {
+                            width: '50%',
+                            description: 'Extra cost in minor units (cents)',
+                          },
+                        },
+                        {
+                          name: 'isDefault',
+                          type: 'checkbox',
+                          defaultValue: false,
+                          admin: { width: '50%' },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
         },
         {
           fields: [
@@ -166,7 +306,7 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
               relationTo: 'products',
             },
           ],
-          label: 'Product Details',
+          label: 'Pricing & Inventory',
         },
         {
           name: 'meta',
@@ -186,10 +326,7 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
 
             MetaDescriptionField({}),
             PreviewField({
-              // if the `generateUrl` function is configured
               hasGenerateFn: true,
-
-              // field paths to match the target field for data
               titlePath: 'meta.title',
               descriptionPath: 'meta.description',
             }),

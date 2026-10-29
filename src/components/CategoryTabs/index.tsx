@@ -7,9 +7,16 @@ import { Item } from './Item'
 
 async function List() {
   const payload = await getPayload({ config: configPromise })
+  // Home strip shows top-level categories only; nested ones live under a parent.
   const categoriesData = await payload.find({
     collection: 'categories',
-    sort: 'title',
+    sort: 'sortOrder',
+    where: {
+      and: [
+        { isActive: { equals: true } },
+        { parent: { exists: false } },
+      ],
+    },
     select: {
       title: true,
       slug: true,
