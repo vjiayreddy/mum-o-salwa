@@ -7,6 +7,8 @@
  */
 
 /**
+ * Payment settlement status. Set to processing when Stripe pays.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "OrderStatus".
  */
@@ -78,6 +80,7 @@ export interface Config {
     categories: Category;
     banners: Banner;
     media: Media;
+    'stripe-events': StripeEvent;
     forms: Form;
     'form-submissions': FormSubmission;
     addresses: Address;
@@ -116,6 +119,7 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     banners: BannersSelect<false> | BannersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'stripe-events': StripeEventsSelect<false> | StripeEventsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     addresses: AddressesSelect<false> | AddressesSelect<true>;
@@ -209,6 +213,10 @@ export interface User {
   driverStatus?: ('pending' | 'approved' | 'suspended') | null;
   rating?: number | null;
   ratingCount?: number | null;
+  /**
+   * Stripe Customer id (created lazily at checkout).
+   */
+  stripeCustomerId?: string | null;
   orders?: {
     docs?: (string | Order)[];
     hasNextPage?: boolean;
@@ -263,6 +271,30 @@ export interface Order {
         product?: (string | null) | Product;
         variant?: (string | null) | Variant;
         quantity: number;
+        /**
+         * Dish title snapshotted at checkout.
+         */
+        name?: string | null;
+        /**
+         * Dish image URL snapshotted at checkout.
+         */
+        imageUrl?: string | null;
+        /**
+         * Selected dish option row IDs (from product.optionGroups.options).
+         */
+        optionIds?: string[] | null;
+        /**
+         * Snapshot of option labels at add-to-cart time.
+         */
+        optionNames?: string[] | null;
+        /**
+         * Per-item kitchen note (e.g. no onions).
+         */
+        note?: string | null;
+        /**
+         * Server-priced unit in minor units (dish base + option deltas).
+         */
+        unitPrice?: number | null;
         id?: string | null;
       }[]
     | null;
@@ -285,6 +317,127 @@ export interface Order {
   status?: OrderStatus;
   amount?: number | null;
   currency?: 'USD' | null;
+  /**
+   * Short customer-facing reference (e.g. CH-2481).
+   */
+  reference?: string | null;
+  /**
+   * Kitchen / rider lifecycle (separate from payment status).
+   */
+  fulfillmentStatus?:
+    | (
+        | 'pending_payment'
+        | 'payment_failed'
+        | 'confirmed'
+        | 'preparing'
+        | 'ready'
+        | 'out_for_delivery'
+        | 'delivered'
+        | 'cancelled'
+      )
+    | null;
+  /**
+   * Append-only fulfillment timeline.
+   */
+  statusHistory?:
+    | {
+        status:
+          | 'pending_payment'
+          | 'payment_failed'
+          | 'confirmed'
+          | 'preparing'
+          | 'ready'
+          | 'out_for_delivery'
+          | 'delivered'
+          | 'cancelled';
+        at: string;
+        note?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Food subtotal in minor units (cents), snapshotted at checkout.
+   */
+  subtotal?: number | null;
+  /**
+   * Delivery fee charged (cents).
+   */
+  deliveryFee?: number | null;
+  /**
+   * Service fee charged (cents).
+   */
+  serviceFee?: number | null;
+  /**
+   * Platform cut of food subtotal (cents).
+   */
+  commission?: number | null;
+  /**
+   * Commission rate locked at checkout (0.25 = 25%).
+   */
+  commissionRate?: number | null;
+  /**
+   * Restaurant share of food subtotal after commission (cents).
+   */
+  restaurantPayout?: number | null;
+  /**
+   * Customer reads this to the rider at the door. Auto-generated on create.
+   */
+  deliveryCode?: string | null;
+  /**
+   * Stripe PaymentIntent id.
+   */
+  paymentIntentId?: string | null;
+  paidAt?: string | null;
+  includeCutlery?: boolean | null;
+  orderNote?: string | null;
+  /**
+   * Drop-off notes for the rider (from address or checkout).
+   */
+  deliveryInstructions?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  restaurantName?: string | null;
+  restaurantImageUrl?: string | null;
+  restaurantAddress?: string | null;
+  restaurantLocation?: {
+    lat?: number | null;
+    lng?: number | null;
+  };
+  deliveryLocation?: {
+    lat?: number | null;
+    lng?: number | null;
+  };
+  prepTimeMinMinutes?: number | null;
+  prepTimeMaxMinutes?: number | null;
+  estimatedDeliveryAt?: string | null;
+  /**
+   * Filled when a rider claims the order (Phase 5).
+   */
+  driver?: {
+    /**
+     * Claiming rider.
+     */
+    user?: (string | null) | User;
+    name?: string | null;
+    phone?: string | null;
+    avatarUrl?: string | null;
+    rating?: number | null;
+    ratingCount?: number | null;
+    location?: {
+      lat?: number | null;
+      lng?: number | null;
+    };
+    locationUpdatedAt?: string | null;
+  };
+  /**
+   * Snapshotted when the delivery is claimed.
+   */
+  driverPayout?: {
+    base?: number | null;
+    distance?: number | null;
+    distanceKm?: number | null;
+    total?: number | null;
+  };
   accessToken?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -1219,6 +1372,18 @@ export interface Banner {
   createdAt: string;
 }
 /**
+ * Stripe webhook idempotency log (system-managed).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stripe-events".
+ */
+export interface StripeEvent {
+  id: string;
+  eventId: string;
+  type: string;
+  processedAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "form-submissions".
  */
@@ -1282,6 +1447,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: string | Media;
+      } | null)
+    | ({
+        relationTo: 'stripe-events';
+        value: string | StripeEvent;
       } | null)
     | ({
         relationTo: 'forms';
@@ -1378,6 +1547,7 @@ export interface UsersSelect<T extends boolean = true> {
   driverStatus?: T;
   rating?: T;
   ratingCount?: T;
+  stripeCustomerId?: T;
   orders?: T;
   cart?: T;
   addresses?: T;
@@ -1660,6 +1830,15 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stripe-events_select".
+ */
+export interface StripeEventsSelect<T extends boolean = true> {
+  eventId?: T;
+  type?: T;
+  processedAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1982,6 +2161,12 @@ export interface OrdersSelect<T extends boolean = true> {
         product?: T;
         variant?: T;
         quantity?: T;
+        name?: T;
+        imageUrl?: T;
+        optionIds?: T;
+        optionNames?: T;
+        note?: T;
+        unitPrice?: T;
         id?: T;
       };
   shippingAddress?:
@@ -2005,6 +2190,73 @@ export interface OrdersSelect<T extends boolean = true> {
   status?: T;
   amount?: T;
   currency?: T;
+  reference?: T;
+  fulfillmentStatus?: T;
+  statusHistory?:
+    | T
+    | {
+        status?: T;
+        at?: T;
+        note?: T;
+        id?: T;
+      };
+  subtotal?: T;
+  deliveryFee?: T;
+  serviceFee?: T;
+  commission?: T;
+  commissionRate?: T;
+  restaurantPayout?: T;
+  deliveryCode?: T;
+  paymentIntentId?: T;
+  paidAt?: T;
+  includeCutlery?: T;
+  orderNote?: T;
+  deliveryInstructions?: T;
+  contactName?: T;
+  contactPhone?: T;
+  restaurantName?: T;
+  restaurantImageUrl?: T;
+  restaurantAddress?: T;
+  restaurantLocation?:
+    | T
+    | {
+        lat?: T;
+        lng?: T;
+      };
+  deliveryLocation?:
+    | T
+    | {
+        lat?: T;
+        lng?: T;
+      };
+  prepTimeMinMinutes?: T;
+  prepTimeMaxMinutes?: T;
+  estimatedDeliveryAt?: T;
+  driver?:
+    | T
+    | {
+        user?: T;
+        name?: T;
+        phone?: T;
+        avatarUrl?: T;
+        rating?: T;
+        ratingCount?: T;
+        location?:
+          | T
+          | {
+              lat?: T;
+              lng?: T;
+            };
+        locationUpdatedAt?: T;
+      };
+  driverPayout?:
+    | T
+    | {
+        base?: T;
+        distance?: T;
+        distanceKm?: T;
+        total?: T;
+      };
   accessToken?: T;
   updatedAt?: T;
   createdAt?: T;
