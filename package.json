@@ -1,8 +1,8 @@
 {
   "name": "mum-o-salwa",
   "version": "1.0.0",
-  "description": "Ecommerce template for Payload",
-  "license": "MIT",
+  "description": "Mum-o-Salwa food delivery platform (Payload CMS)",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
@@ -23,13 +23,16 @@
   },
   "dependencies": {
     "@payloadcms/admin-bar": "3.92.1",
+    "@payloadcms/db-mongodb": "3.92.1",
     "@payloadcms/email-nodemailer": "3.92.1",
     "@payloadcms/live-preview-react": "3.92.1",
     "@payloadcms/next": "3.92.1",
     "@payloadcms/plugin-ecommerce": "3.92.1",
     "@payloadcms/plugin-form-builder": "3.92.1",
+    "@payloadcms/plugin-multi-tenant": "3.92.1",
     "@payloadcms/plugin-seo": "3.92.1",
     "@payloadcms/richtext-lexical": "3.92.1",
+    "@payloadcms/storage-s3": "3.92.1",
     "@payloadcms/translations": "3.92.1",
     "@payloadcms/ui": "3.92.1",
     "@radix-ui/react-accordion": "1.2.11",
@@ -62,8 +65,7 @@
     "sharp": "0.35.4",
     "sonner": "^1.7.2",
     "stripe": "18.5.0",
-    "tailwind-merge": "^3.4.0",
-    "@payloadcms/db-mongodb": "3.92.1"
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

@@ -1,13 +1,14 @@
 import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
 import { seoPlugin } from '@payloadcms/plugin-seo'
-import { Plugin } from 'payload'
-import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
+import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
+import { s3Storage } from '@payloadcms/storage-s3'
+import type { Plugin } from 'payload'
+import type { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
-import { ecommercePlugin } from '@payloadcms/plugin-ecommerce'
-
+import { ecommercePlugin, USD } from '@payloadcms/plugin-ecommerce'
 import { stripeAdapter } from '@payloadcms/plugin-ecommerce/payments/stripe'
 
-import { Page, Product } from '@/payload-types'
+import type { Config, Page, Product, User } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 import { ProductsCollection } from '@/collections/Products'
 import { adminOrPublishedStatus } from '@/access/adminOrPublishedStatus'
@@ -15,9 +16,10 @@ import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
 import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
+import { checkRole } from '@/access/utilities'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
-  return doc?.title ? `${doc.title} | Payload Ecommerce Template` : 'Payload Ecommerce Template'
+  return doc?.title ? `${doc.title} | Mum-o-Salwa` : 'Mum-o-Salwa'
 }
 
 const generateURL: GenerateURL<Product | Page> = ({ doc }) => {
@@ -25,6 +27,13 @@ const generateURL: GenerateURL<Product | Page> = ({ doc }) => {
 
   return doc?.slug ? `${url}/${doc.slug}` : url
 }
+
+const r2Configured = Boolean(
+  process.env.R2_BUCKET &&
+    process.env.R2_ACCESS_KEY_ID &&
+    process.env.R2_SECRET_ACCESS_KEY &&
+    process.env.R2_ENDPOINT,
+)
 
 export const plugins: Plugin[] = [
   seoPlugin({
@@ -84,6 +93,11 @@ export const plugins: Plugin[] = [
       isAdmin,
       isDocumentOwner,
     },
+    currencies: {
+      defaultCurrency: 'USD',
+      // USD first; add EUR/GBP/etc. here when expanding markets
+      supportedCurrencies: [USD],
+    },
     customers: {
       slug: 'users',
     },
@@ -127,5 +141,58 @@ export const plugins: Plugin[] = [
     products: {
       productsCollectionOverride: ProductsCollection,
     },
+  }),
+  multiTenantPlugin<Config>({
+    collections: {
+      // Dishes (products) are scoped per restaurant tenant
+      products: {},
+      // Orders carry a tenant field but use custom access (marketplace checkout)
+      orders: {
+        useTenantAccess: false,
+      },
+    },
+    tenantField: {
+      access: {
+        read: () => true,
+        update: ({ req }) => checkRole(['admin', 'restaurant'], req.user as User | null),
+      },
+    },
+    tenantsArrayField: {
+      includeDefaultField: true,
+      rowFields: [
+        {
+          name: 'roles',
+          type: 'select',
+          defaultValue: ['owner'],
+          hasMany: true,
+          options: [
+            { label: 'Owner', value: 'owner' },
+            { label: 'Kitchen', value: 'kitchen' },
+          ],
+          required: true,
+        },
+      ],
+    },
+    userHasAccessToAllTenants: (user) => checkRole(['admin'], user as User | null),
+  }),
+  s3Storage({
+    collections: {
+      media: {
+        prefix: 'media',
+      },
+    },
+    bucket: process.env.R2_BUCKET || '',
+    config: {
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+      },
+      region: process.env.R2_REGION || 'auto',
+      endpoint: process.env.R2_ENDPOINT || undefined,
+      forcePathStyle: true,
+    },
+    // Keep local disk uploads when R2 env is not configured
+    enabled: r2Configured,
+    alwaysInsertFields: true,
   }),
 ]

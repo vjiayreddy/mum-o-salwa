@@ -11,7 +11,8 @@ import { ensureFirstUserIsAdmin } from './hooks/ensureFirstUserIsAdmin'
 export const Users: CollectionConfig = {
   slug: 'users',
   access: {
-    admin: ({ req: { user } }) => checkRole(['admin'], user),
+    // Platform admins and restaurant staff use Payload Admin
+    admin: ({ req: { user } }) => checkRole(['admin', 'restaurant'], user),
     create: publicAccess,
     delete: adminOnly,
     read: adminOrSelf,
@@ -20,16 +21,22 @@ export const Users: CollectionConfig = {
   },
   admin: {
     group: 'Users',
-    defaultColumns: ['name', 'email', 'roles'],
+    defaultColumns: ['name', 'email', 'roles', 'driverStatus', 'isActive'],
     useAsTitle: 'name',
   },
   auth: {
-    tokenExpiration: 1209600,
+    tokenExpiration: 1209600, // 14 days — matches mobile session needs
   },
   fields: [
     {
       name: 'name',
       type: 'text',
+      required: true,
+    },
+    {
+      name: 'phone',
+      type: 'text',
+      maxLength: 32,
     },
     {
       name: 'roles',
@@ -45,13 +52,75 @@ export const Users: CollectionConfig = {
         beforeChange: [ensureFirstUserIsAdmin],
       },
       options: [
+        { label: 'Admin', value: 'admin' },
+        { label: 'Customer', value: 'customer' },
+        { label: 'Driver', value: 'driver' },
+        { label: 'Restaurant', value: 'restaurant' },
+      ],
+      saveToJWT: true,
+    },
+    {
+      name: 'isActive',
+      type: 'checkbox',
+      defaultValue: true,
+      access: {
+        create: adminOnlyFieldAccess,
+        update: adminOnlyFieldAccess,
+      },
+      admin: {
+        position: 'sidebar',
+        description: 'Inactive users cannot sign in (enforced in hooks later)',
+      },
+    },
+    {
+      type: 'collapsible',
+      label: 'Driver',
+      admin: {
+        condition: (_, siblingData) =>
+          Array.isArray(siblingData?.roles) && siblingData.roles.includes('driver'),
+        initCollapsed: true,
+      },
+      fields: [
         {
-          label: 'admin',
-          value: 'admin',
+          name: 'isOnline',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Whether the driver is currently accepting deliveries',
+          },
         },
         {
-          label: 'customer',
-          value: 'customer',
+          name: 'driverStatus',
+          type: 'select',
+          defaultValue: 'pending',
+          options: [
+            { label: 'Pending approval', value: 'pending' },
+            { label: 'Approved', value: 'approved' },
+            { label: 'Suspended', value: 'suspended' },
+          ],
+          access: {
+            create: adminOnlyFieldAccess,
+            update: adminOnlyFieldAccess,
+          },
+          index: true,
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'rating',
+              type: 'number',
+              min: 0,
+              max: 5,
+              admin: { width: '50%' },
+            },
+            {
+              name: 'ratingCount',
+              type: 'number',
+              min: 0,
+              admin: { width: '50%' },
+            },
+          ],
         },
       ],
     },

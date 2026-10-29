@@ -73,6 +73,7 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    tenants: Tenant;
     pages: Page;
     categories: Category;
     media: Media;
@@ -106,6 +107,7 @@ export interface Config {
   };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    tenants: TenantsSelect<false> | TenantsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -186,8 +188,20 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
-  name?: string | null;
-  roles?: ('admin' | 'customer')[] | null;
+  name: string;
+  phone?: string | null;
+  roles?: ('admin' | 'customer' | 'driver' | 'restaurant')[] | null;
+  /**
+   * Inactive users cannot sign in (enforced in hooks later)
+   */
+  isActive?: boolean | null;
+  /**
+   * Whether the driver is currently accepting deliveries
+   */
+  isOnline?: boolean | null;
+  driverStatus?: ('pending' | 'approved' | 'suspended') | null;
+  rating?: number | null;
+  ratingCount?: number | null;
   orders?: {
     docs?: (string | Order)[];
     hasNextPage?: boolean;
@@ -203,6 +217,13 @@ export interface User {
     hasNextPage?: boolean;
     totalDocs?: number;
   };
+  tenants?:
+    | {
+        tenant: string | Tenant;
+        roles: ('owner' | 'kitchen')[];
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -229,6 +250,7 @@ export interface User {
  */
 export interface Order {
   id: string;
+  tenant?: (string | null) | Tenant;
   items?:
     | {
         product?: (string | null) | Product;
@@ -262,10 +284,122 @@ export interface Order {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants".
+ */
+export interface Tenant {
+  id: string;
+  name: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  description?: string | null;
+  image?: (string | null) | Media;
+  /**
+   * e.g. Italian, Grill, Sushi
+   */
+  cuisines?: string[] | null;
+  categories?: (string | Category)[] | null;
+  /**
+   * Admin-entered rating (not customer reviews)
+   */
+  rating?: number | null;
+  ratingCount?: number | null;
+  prepTimeMinMinutes: number;
+  prepTimeMaxMinutes: number;
+  /**
+   * Delivery fee in minor units (cents). Default 490 = $4.90
+   */
+  deliveryFee: number;
+  /**
+   * Minimum order subtotal in minor units
+   */
+  minOrder: number;
+  /**
+   * Subtotal (cents) at which delivery becomes free. Empty = never free.
+   */
+  freeDeliveryThreshold?: number | null;
+  /**
+   * Override platform commission (0–0.5). Empty uses platform-settings default.
+   */
+  commissionRate?: number | null;
+  address: string;
+  /**
+   * Restaurant coordinates [longitude, latitude]
+   *
+   * @minItems 2
+   * @maxItems 2
+   */
+  location: [number, number];
+  /**
+   * Closing time as HH:mm (24h)
+   */
+  closesAt?: string | null;
+  isOpen?: boolean | null;
+  isActive?: boolean | null;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: string;
+  alt: string;
+  caption?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  prefix?: string | null;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: string;
+  title: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "products".
  */
 export interface Product {
   id: string;
+  tenant?: (string | null) | Tenant;
   title: string;
   description?: {
     root: {
@@ -319,40 +453,6 @@ export interface Product {
   createdAt: string;
   deletedAt?: string | null;
   _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: string;
-  alt: string;
-  caption?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -592,21 +692,6 @@ export interface ArchiveBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'archive';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categories".
- */
-export interface Category {
-  id: string;
-  title: string;
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1058,6 +1143,10 @@ export interface PayloadLockedDocument {
         value: string | User;
       } | null)
     | ({
+        relationTo: 'tenants';
+        value: string | Tenant;
+      } | null)
+    | ({
         relationTo: 'pages';
         value: string | Page;
       } | null)
@@ -1157,10 +1246,23 @@ export interface PayloadMigration {
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  phone?: T;
   roles?: T;
+  isActive?: T;
+  isOnline?: T;
+  driverStatus?: T;
+  rating?: T;
+  ratingCount?: T;
   orders?: T;
   cart?: T;
   addresses?: T;
+  tenants?:
+    | T
+    | {
+        tenant?: T;
+        roles?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1178,6 +1280,35 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants_select".
+ */
+export interface TenantsSelect<T extends boolean = true> {
+  name?: T;
+  generateSlug?: T;
+  slug?: T;
+  description?: T;
+  image?: T;
+  cuisines?: T;
+  categories?: T;
+  rating?: T;
+  ratingCount?: T;
+  prepTimeMinMinutes?: T;
+  prepTimeMaxMinutes?: T;
+  deliveryFee?: T;
+  minOrder?: T;
+  freeDeliveryThreshold?: T;
+  commissionRate?: T;
+  address?: T;
+  location?: T;
+  closesAt?: T;
+  isOpen?: T;
+  isActive?: T;
+  sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1369,6 +1500,8 @@ export interface CategoriesSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  prefix?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1596,6 +1729,7 @@ export interface VariantOptionsSelect<T extends boolean = true> {
  * via the `definition` "products_select".
  */
 export interface ProductsSelect<T extends boolean = true> {
+  tenant?: T;
   title?: T;
   description?: T;
   gallery?:
@@ -1661,6 +1795,7 @@ export interface CartsSelect<T extends boolean = true> {
  * via the `definition` "orders_select".
  */
 export interface OrdersSelect<T extends boolean = true> {
+  tenant?: T;
   items?:
     | T
     | {

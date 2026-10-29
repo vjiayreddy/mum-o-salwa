@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url'
 import { Categories } from '@/collections/Categories'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
+import { Tenants } from '@/collections/Tenants'
 import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
@@ -38,7 +39,7 @@ export default buildConfig({
     },
     user: Users.slug,
   },
-  collections: [Users, Pages, Categories, Media],
+  collections: [Users, Tenants, Pages, Categories, Media],
   db: mongooseAdapter({
     url: process.env.DATABASE_URL || '',
   }),
