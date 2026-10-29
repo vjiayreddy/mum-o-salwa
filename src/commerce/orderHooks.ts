@@ -1,7 +1,14 @@
-import type { CollectionAfterChangeHook, CollectionBeforeValidateHook } from 'payload'
+import {
+  APIError,
+  type CollectionAfterChangeHook,
+  type CollectionBeforeChangeHook,
+  type CollectionBeforeValidateHook,
+} from 'payload'
 
 import {
   appendStatusHistory,
+  canKitchenTransition,
+  canSystemTransition,
   generateOrderReference,
   newDeliveryCode,
   type FulfillmentStatus,
@@ -63,6 +70,56 @@ export const orderBeforeValidateDefaults: CollectionBeforeValidateHook = async (
   }
 
   return data
+}
+
+/**
+ * Guard fulfillmentStatus changes made via Admin / REST (not kitchen endpoints).
+ * Kitchen + release-rider services set `skipFulfillmentGuard` after validating.
+ */
+export const orderBeforeChangeFulfillment: CollectionBeforeChangeHook = async ({
+  context,
+  data,
+  operation,
+  originalDoc,
+  req,
+}) => {
+  if (operation !== 'update' || !data || context?.skipFulfillmentGuard) return data
+
+  const from = (originalDoc?.fulfillmentStatus as FulfillmentStatus | undefined) ?? undefined
+  const to = data.fulfillmentStatus as FulfillmentStatus | undefined
+  if (!to || !from || to === from) return data
+
+  if (canKitchenTransition(from, to)) {
+    const history =
+      (data.statusHistory as StatusHistoryEntry[] | undefined) ??
+      (originalDoc?.statusHistory as StatusHistoryEntry[] | undefined) ??
+      []
+    const last = history.at(-1)
+    if (last?.status !== to) {
+      const actor =
+        (req.user as { name?: string | null; email?: string } | null)?.name?.trim() ||
+        (req.user as { email?: string } | null)?.email ||
+        'staff'
+      data.statusHistory = appendStatusHistory(
+        history,
+        to,
+        `Set to ${to.replace(/_/g, ' ')} by ${actor}`,
+      )
+    }
+    if (to === 'cancelled') {
+      data.status = 'cancelled'
+    }
+    return data
+  }
+
+  if (canSystemTransition(from, to)) {
+    return data
+  }
+
+  throw new APIError(
+    `An order that is ${from.replace(/_/g, ' ')} cannot be moved to ${to.replace(/_/g, ' ')}`,
+    400,
+  )
 }
 
 /**

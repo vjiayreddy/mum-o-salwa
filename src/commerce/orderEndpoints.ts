@@ -6,6 +6,8 @@ import {
   syncOrderPayment,
   type CreateCheckoutInput,
 } from '@/commerce/checkout'
+import { releaseOrderRider, transitionOrderFulfillment } from '@/commerce/kitchen'
+import { FULFILLMENT_STATUSES, type FulfillmentStatus } from '@/commerce/orderStatus'
 
 const jsonError = (error: unknown) => {
   const status =
@@ -15,6 +17,10 @@ const jsonError = (error: unknown) => {
   const message = error instanceof Error ? error.message : 'Request failed'
   return Response.json({ message }, { status })
 }
+
+const isFulfillmentStatus = (value: unknown): value is FulfillmentStatus =>
+  typeof value === 'string' &&
+  (FULFILLMENT_STATUSES as readonly string[]).includes(value)
 
 /** POST /api/orders/create-checkout — snapshot cart + Stripe PaymentIntent. */
 export const createCheckoutEndpoint: Endpoint = {
@@ -78,8 +84,53 @@ export const reorderEndpoint: Endpoint = {
   path: '/:id/reorder',
 }
 
+/** POST /api/orders/:id/transition-status — kitchen/admin fulfillment move. */
+export const transitionStatusEndpoint: Endpoint = {
+  handler: async (req) => {
+    try {
+      await addDataAndFileToRequest(req)
+      const orderID = req.routeParams?.id
+      if (typeof orderID !== 'string' || !orderID) {
+        return Response.json({ message: 'Order id required' }, { status: 400 })
+      }
+      const body = (req.data ?? {}) as { status?: unknown }
+      if (!isFulfillmentStatus(body.status)) {
+        return Response.json({ message: 'Valid fulfillment status required' }, { status: 400 })
+      }
+      const order = await transitionOrderFulfillment(req, orderID, body.status)
+      return Response.json({ order })
+    } catch (error) {
+      req.payload.logger.error({ err: error, msg: 'transition-status failed' })
+      return jsonError(error)
+    }
+  },
+  method: 'post',
+  path: '/:id/transition-status',
+}
+
+/** POST /api/orders/:id/release-rider — admin returns order to ready queue. */
+export const releaseRiderEndpoint: Endpoint = {
+  handler: async (req) => {
+    try {
+      const orderID = req.routeParams?.id
+      if (typeof orderID !== 'string' || !orderID) {
+        return Response.json({ message: 'Order id required' }, { status: 400 })
+      }
+      const order = await releaseOrderRider(req, orderID)
+      return Response.json({ order })
+    } catch (error) {
+      req.payload.logger.error({ err: error, msg: 'release-rider failed' })
+      return jsonError(error)
+    }
+  },
+  method: 'post',
+  path: '/:id/release-rider',
+}
+
 export const deliveryOrderEndpoints: Endpoint[] = [
   createCheckoutEndpoint,
   syncPaymentEndpoint,
   reorderEndpoint,
+  transitionStatusEndpoint,
+  releaseRiderEndpoint,
 ]

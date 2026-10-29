@@ -16,6 +16,10 @@ import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
 import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
+import {
+  adminCustomerOrRestaurantOrder,
+  adminOrRestaurantOrderUpdate,
+} from '@/access/restaurantTenants'
 import { checkRole } from '@/access/utilities'
 import {
   addressAfterChange,
@@ -29,6 +33,7 @@ import {
   deliveryStripeWebhooks,
   mapDeliveryOrderFields,
   orderAfterChangePaymentSync,
+  orderBeforeChangeFulfillment,
   orderBeforeValidateDefaults,
 } from '@/commerce'
 
@@ -231,6 +236,14 @@ export const plugins: Plugin[] = [
     orders: {
       ordersCollectionOverride: ({ defaultCollection }) => ({
         ...defaultCollection,
+        access: {
+          ...defaultCollection.access,
+          // Checkout uses Local API with overrideAccess; customers do not create via REST
+          create: isAdmin,
+          delete: isAdmin,
+          read: adminCustomerOrRestaurantOrder,
+          update: adminOrRestaurantOrderUpdate,
+        },
         admin: {
           ...defaultCollection.admin,
           defaultColumns: [
@@ -277,6 +290,10 @@ export const plugins: Plugin[] = [
           afterChange: [
             ...(defaultCollection.hooks?.afterChange || []),
             orderAfterChangePaymentSync,
+          ],
+          beforeChange: [
+            ...(defaultCollection.hooks?.beforeChange || []),
+            orderBeforeChangeFulfillment,
           ],
           beforeValidate: [
             ...(defaultCollection.hooks?.beforeValidate || []),

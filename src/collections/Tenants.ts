@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { slugField } from 'payload'
 
 import { adminOnly } from '@/access/adminOnly'
-import { checkRole } from '@/access/utilities'
+import { adminOrRestaurant } from '@/access/restaurantTenants'
 
 export const Tenants: CollectionConfig = {
   slug: 'tenants',
@@ -18,22 +18,10 @@ export const Tenants: CollectionConfig = {
   access: {
     create: adminOnly,
     delete: adminOnly,
-    read: ({ req: { user } }) => {
-      if (!user) return true
-      if (checkRole(['admin'], user)) return true
-      if (checkRole(['restaurant'], user)) {
-        return true
-      }
-      return true
-    },
-    update: ({ req: { user } }) => {
-      if (!user) return false
-      if (checkRole(['admin'], user)) return true
-      if (checkRole(['restaurant'], user)) {
-        return true
-      }
-      return false
-    },
+    // Public catalogue read; multi-tenant scopes restaurant staff to their rows
+    read: () => true,
+    // Multi-tenant plugin constrains restaurant users to assigned tenants
+    update: adminOrRestaurant,
   },
   fields: [
     {
