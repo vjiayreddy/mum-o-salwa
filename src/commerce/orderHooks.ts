@@ -73,8 +73,8 @@ export const orderBeforeValidateDefaults: CollectionBeforeValidateHook = async (
 }
 
 /**
- * Guard fulfillmentStatus changes made via Admin / REST (not kitchen endpoints).
- * Kitchen + release-rider services set `skipFulfillmentGuard` after validating.
+ * Guard fulfillmentStatus changes made via Admin / REST (not kitchen/driver endpoints).
+ * Kitchen, driver, and release-rider services set `skipFulfillmentGuard` after validating.
  */
 export const orderBeforeChangeFulfillment: CollectionBeforeChangeHook = async ({
   context,

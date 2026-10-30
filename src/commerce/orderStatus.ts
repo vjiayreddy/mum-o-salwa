@@ -33,12 +33,14 @@ const KITCHEN_TRANSITIONS: Partial<Record<FulfillmentStatus, FulfillmentStatus[]
   ready: ['cancelled'],
 }
 
-/** Payment + release-rider paths that bypass the kitchen graph. */
+/** Payment, rider, and release-rider paths that bypass the kitchen graph. */
 const SYSTEM_TRANSITIONS: Partial<Record<FulfillmentStatus, FulfillmentStatus[]>> = {
   pending_payment: ['confirmed', 'payment_failed'],
   payment_failed: ['confirmed'],
-  // Release rider: stranded out_for_delivery goes back to ready for re-claim
-  out_for_delivery: ['ready'],
+  // Driver pickup
+  ready: ['out_for_delivery'],
+  // Release rider (→ ready) or driver complete (→ delivered)
+  out_for_delivery: ['ready', 'delivered'],
 }
 
 export const canKitchenTransition = (
@@ -100,7 +102,7 @@ export const applyKitchenTransition = (
   return patch
 }
 
-type DriverSnapshot = {
+export type DriverSnapshot = {
   user?: unknown
   name?: string | null
   phone?: string | null
@@ -110,6 +112,136 @@ type DriverSnapshot = {
   location?: { lat?: number | null; lng?: number | null } | null
   locationUpdatedAt?: string | null
 } | null
+
+export type DriverPayoutSnapshot = {
+  base?: number | null
+  distance?: number | null
+  distanceKm?: number | null
+  total?: number | null
+} | null
+
+const relationID = (value: unknown): string | null => {
+  if (value == null) return null
+  if (typeof value === 'string' || typeof value === 'number') return String(value)
+  if (typeof value === 'object' && value !== null && 'id' in value) {
+    const id = (value as { id?: unknown }).id
+    return id == null ? null : String(id)
+  }
+  return null
+}
+
+/** True when an order already has an assigned rider. */
+export const orderHasDriver = (order: { driver?: DriverSnapshot }): boolean =>
+  Boolean(order.driver?.user || order.driver?.name?.trim())
+
+export const orderDriverID = (order: { driver?: DriverSnapshot }): string | null =>
+  relationID(order.driver?.user)
+
+/**
+ * Snapshot rider + payout onto a ready, unclaimed order. Stays `ready` until pickup.
+ */
+export const applyClaimDelivery = (
+  order: {
+    fulfillmentStatus?: FulfillmentStatus | null
+    statusHistory?: StatusHistoryEntry[] | null
+    driver?: DriverSnapshot
+  },
+  driver: NonNullable<DriverSnapshot>,
+  payout: NonNullable<DriverPayoutSnapshot>,
+): {
+  driver: NonNullable<DriverSnapshot>
+  driverPayout: NonNullable<DriverPayoutSnapshot>
+  statusHistory: StatusHistoryEntry[]
+} => {
+  if (order.fulfillmentStatus !== 'ready') {
+    throw new Error('This order is not ready for collection yet')
+  }
+
+  const existingID = orderDriverID(order)
+  if (existingID || order.driver?.name?.trim()) {
+    throw new Error(
+      existingID && String(existingID) === String(relationID(driver.user))
+        ? 'You have already claimed this delivery'
+        : 'Another rider claimed this delivery',
+    )
+  }
+
+  const label = driver.name?.trim() || 'rider'
+  return {
+    driver,
+    driverPayout: payout,
+    statusHistory: appendStatusHistory(
+      order.statusHistory,
+      'ready',
+      `Claimed by ${label}`,
+    ),
+  }
+}
+
+/** Claimed rider collects from the restaurant → out_for_delivery. */
+export const applyPickupDelivery = (
+  order: {
+    fulfillmentStatus?: FulfillmentStatus | null
+    statusHistory?: StatusHistoryEntry[] | null
+    driver?: DriverSnapshot
+  },
+  driverID: string,
+): {
+  fulfillmentStatus: 'out_for_delivery'
+  statusHistory: StatusHistoryEntry[]
+} => {
+  if (orderDriverID(order) !== String(driverID)) {
+    throw new Error('Delivery not found')
+  }
+  if (order.fulfillmentStatus !== 'ready') {
+    throw new Error('This delivery is already on its way')
+  }
+
+  return {
+    fulfillmentStatus: 'out_for_delivery',
+    statusHistory: appendStatusHistory(
+      order.statusHistory,
+      'out_for_delivery',
+      'Rider picked up your order',
+    ),
+  }
+}
+
+/** Door-code check; marks delivered and settles the plugin order. */
+export const applyCompleteDelivery = (
+  order: {
+    fulfillmentStatus?: FulfillmentStatus | null
+    statusHistory?: StatusHistoryEntry[] | null
+    driver?: DriverSnapshot
+    deliveryCode?: string | null
+  },
+  driverID: string,
+  code: string,
+): {
+  fulfillmentStatus: 'delivered'
+  status: 'completed'
+  statusHistory: StatusHistoryEntry[]
+} => {
+  if (orderDriverID(order) !== String(driverID)) {
+    throw new Error('Delivery not found')
+  }
+  if (order.fulfillmentStatus !== 'out_for_delivery') {
+    throw new Error('Pick the order up before delivering it')
+  }
+  if (!order.deliveryCode || order.deliveryCode !== code) {
+    throw new Error('That code does not match. Ask the customer to read it again.')
+  }
+
+  return {
+    fulfillmentStatus: 'delivered',
+    status: 'completed',
+    statusHistory: appendStatusHistory(
+      order.statusHistory,
+      'delivered',
+      'Delivered to your door',
+    ),
+  }
+}
 
 /**
  * Clear the assigned rider and return the order to `ready` for re-claim.
@@ -127,9 +259,7 @@ export const applyReleaseRider = (
   fulfillmentStatus: 'ready'
   statusHistory: StatusHistoryEntry[]
 } => {
-  const driverName = order.driver?.name?.trim()
-  const hasDriver = Boolean(order.driver?.user || driverName)
-  if (!hasDriver) {
+  if (!orderHasDriver(order)) {
     throw new Error('No rider is assigned to this order')
   }
 
@@ -137,7 +267,7 @@ export const applyReleaseRider = (
     throw new Error('Only an order still on its way can be released')
   }
 
-  const label = driverName || 'rider'
+  const label = order.driver?.name?.trim() || 'rider'
   return {
     driver: null,
     driverPayout: null,

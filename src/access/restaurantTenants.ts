@@ -52,9 +52,9 @@ export const adminOrRestaurant: Access = ({ req: { user } }) => {
 }
 
 /**
- * Orders read: platform admin, the customer who placed it, or restaurant staff
- * for that order's tenant. Orders use `useTenantAccess: false`, so this query
- * constraint carries the restaurant scope.
+ * Orders read: platform admin, the customer who placed it, restaurant staff for
+ * that order's tenant, or a driver (ready queue + their own claimed jobs).
+ * Orders use `useTenantAccess: false`, so this query carries restaurant scope.
  */
 export const adminCustomerOrRestaurantOrder: Access = ({ req: { user } }) => {
   if (!user) return false
@@ -71,6 +71,21 @@ export const adminCustomerOrRestaurantOrder: Access = ({ req: { user } }) => {
     if (tenantIDs.length) {
       constraints.push({ tenant: { in: tenantIDs } })
     }
+  }
+
+  if (checkRole(['driver'], user as User) && user.id) {
+    constraints.push({
+      and: [
+        { fulfillmentStatus: { equals: 'ready' } },
+        {
+          or: [
+            { 'driver.user': { exists: false } },
+            { 'driver.user': { equals: null } },
+          ],
+        },
+      ],
+    })
+    constraints.push({ 'driver.user': { equals: user.id } })
   }
 
   if (constraints.length === 0) return false

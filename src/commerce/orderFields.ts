@@ -298,7 +298,7 @@ export const deliveryOrderFields: Field[] = [
     type: 'group',
     name: 'driver',
     admin: {
-      description: 'Filled when a rider claims the order (Phase 5).',
+      description: 'Filled when a rider claims the order.',
     },
     fields: [
       {
@@ -331,7 +331,20 @@ export const deliveryOrderFields: Field[] = [
     type: 'group',
     name: 'driverPayout',
     access: {
-      read: adminOnlyFieldAccess,
+      read: ({ doc, req: { user } }) => {
+        if (!user) return false
+        if (checkRole(['admin'], user as User)) return true
+        if (!checkRole(['driver'], user as User)) return false
+        const assigned =
+          doc && typeof doc === 'object' && 'driver' in doc
+            ? (doc as { driver?: { user?: unknown } }).driver?.user
+            : undefined
+        if (assigned == null) return false
+        if (typeof assigned === 'object' && assigned !== null && 'id' in assigned) {
+          return String((assigned as { id: unknown }).id) === String(user.id)
+        }
+        return String(assigned) === String(user.id)
+      },
       update: adminOnlyFieldAccess,
     },
     admin: {
