@@ -38,7 +38,7 @@ export const Search: React.FC<Props> = ({ className }) => {
         defaultValue={searchParams?.get('q') || ''}
         key={searchParams?.get('q')}
         name="search"
-        placeholder="Search for products..."
+        placeholder="Search restaurants…"
         type="text"
       />
       <div className="absolute right-0 top-0 mr-3 flex h-full items-center">
