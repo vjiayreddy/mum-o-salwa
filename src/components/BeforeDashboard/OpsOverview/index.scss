@@ -1,0 +1,142 @@
+@import '@payloadcms/ui/scss';
+
+.ops-overview {
+  background: var(--theme-elevation-50);
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 4px;
+  margin-bottom: base(1.5);
+  padding: base(1.25);
+
+  &__header {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: base(0.75);
+    justify-content: space-between;
+    margin-bottom: base(1);
+  }
+
+  &__title {
+    margin: 0 0 base(0.25);
+  }
+
+  &__subtitle,
+  &__muted,
+  &__meta,
+  &__label {
+    color: var(--theme-elevation-600);
+    font-size: 0.85rem;
+  }
+
+  &__error {
+    color: var(--theme-error-500);
+    margin: 0;
+  }
+
+  &__days {
+    display: flex;
+    gap: base(0.35);
+  }
+
+  &__day {
+    background: var(--theme-elevation-100);
+    border: 1px solid var(--theme-elevation-150);
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    padding: 4px 10px;
+
+    &--active {
+      background: var(--theme-elevation-800);
+      border-color: var(--theme-elevation-800);
+      color: var(--theme-elevation-0);
+    }
+  }
+
+  &__cards {
+    display: grid;
+    gap: base(0.75);
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    margin-bottom: base(1.25);
+  }
+
+  &__card {
+    background: var(--theme-elevation-0);
+    border: 1px solid var(--theme-elevation-150);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: base(0.75);
+  }
+
+  &__value {
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__grid {
+    display: grid;
+    gap: base(1.25);
+    grid-template-columns: 1.4fr 1fr;
+
+    @include mid-break {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__section {
+    margin: 0 0 base(0.5);
+  }
+
+  &__series,
+  &__status,
+  &__recent {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    & li {
+      align-items: center;
+      display: flex;
+      gap: base(0.5);
+      justify-content: space-between;
+      padding: 6px 0;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid var(--theme-elevation-100);
+      }
+    }
+  }
+
+  &__series-date {
+    flex: 0 0 3rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__series-value {
+    flex: 0 0 4.5rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  &__bar-track {
+    background: var(--theme-elevation-100);
+    border-radius: 999px;
+    flex: 1;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  &__bar {
+    background: var(--theme-success-500);
+    display: block;
+    height: 100%;
+    min-width: 0;
+  }
+
+  &__status li,
+  &__recent li {
+    text-transform: capitalize;
+  }
+}
