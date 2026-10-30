@@ -56,7 +56,23 @@ export {
 export type { DeliveryPayload, DriverHome, DriverSummary } from './driver'
 export { deliveryDriverEndpoints } from './driverEndpoints'
 export { releaseOrderRider, transitionOrderFulfillment } from './kitchen'
+export { deliveryOpsEndpoints } from './opsEndpoints'
 export { deliveryOrderEndpoints } from './orderEndpoints'
+export { getAnalyticsOverview } from './analytics'
+export { reorderBanners, reorderCategories } from './reorder'
+export { searchCatalogue } from './search'
+export { setCustomerActive, updateRiderAccount } from './adminOps'
+export {
+  EMPTY_ANALYTICS_TOTALS,
+  LIVE_FULFILLMENT_STATUSES,
+  PAID_FULFILLMENT_STATUSES,
+  escapeRegex,
+  fillRevenueSeries,
+  normalizeSearchTerm,
+  parseOverviewDays,
+  parseSortOrderBatch,
+  totalsFromAggregateRow,
+} from './opsHelpers'
 export { deliveryOrderFields, mapDeliveryOrderFields } from './orderFields'
 export {
   orderAfterChangePaymentSync,

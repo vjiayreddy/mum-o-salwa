@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { APIError } from 'payload'
 
 import { adminOnly } from '@/access/adminOnly'
 import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
@@ -7,6 +8,15 @@ import { adminOrSelf } from '@/access/adminOrSelf'
 import { checkRole } from '@/access/utilities'
 
 import { ensureFirstUserIsAdmin } from './hooks/ensureFirstUserIsAdmin'
+
+/** Suspended / inactive accounts never receive a session. */
+const rejectInactiveLogin: NonNullable<
+  NonNullable<CollectionConfig['hooks']>['beforeLogin']
+>[number] = async ({ user }) => {
+  if (user && user.isActive === false) {
+    throw new APIError('Your account has been suspended. Contact support.', 403)
+  }
+}
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -26,6 +36,9 @@ export const Users: CollectionConfig = {
   },
   auth: {
     tokenExpiration: 1209600, // 14 days — matches mobile session needs
+  },
+  hooks: {
+    beforeLogin: [rejectInactiveLogin],
   },
   fields: [
     {
@@ -69,7 +82,7 @@ export const Users: CollectionConfig = {
       },
       admin: {
         position: 'sidebar',
-        description: 'Inactive users cannot sign in (enforced in hooks later)',
+        description: 'Inactive users cannot sign in (beforeLogin rejects them).',
       },
     },
     {
