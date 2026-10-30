@@ -1,10 +1,10 @@
-# Payload Ecommerce Template
+# Mum-o-Salwa
 
-This template is in **BETA**.
+Food delivery platform built on [Payload CMS](https://payloadcms.com) (Next.js admin + API + web storefront).
 
-This is the official [Payload Ecommerce Template](https://github.com/payloadcms/payload/blob/3.x/templates/ecommerce). This repo includes a fully-working backend, enterprise-grade admin panel, and a beautifully designed, production-ready ecommerce website.
+**Payload is the only backend.** Run `pnpm dev` on port `3000`. The legacy Express API (`rsap/api` on `:8000`) is retired local reference code (gitignored) — do not use it for product traffic. Expo apps should set `EXPO_PUBLIC_API_URL=http://localhost:3000/api` (see [docs/EXPO_API_CUTOVER.md](docs/EXPO_API_CUTOVER.md)).
 
-This template is right for you if you are working on building an ecommerce project or shop with Payload.
+Based on the Payload Ecommerce Template (**BETA**), adapted for multi-restaurant delivery.
 
 Core features:
 

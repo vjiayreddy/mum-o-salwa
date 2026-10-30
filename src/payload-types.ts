@@ -203,7 +203,7 @@ export interface User {
   phone?: string | null;
   roles?: ('admin' | 'customer' | 'driver' | 'restaurant')[] | null;
   /**
-   * Inactive users cannot sign in (enforced in hooks later)
+   * Inactive users cannot sign in (beforeLogin rejects them).
    */
   isActive?: boolean | null;
   /**
@@ -411,7 +411,7 @@ export interface Order {
   prepTimeMaxMinutes?: number | null;
   estimatedDeliveryAt?: string | null;
   /**
-   * Filled when a rider claims the order (Phase 5).
+   * Filled when a rider claims the order.
    */
   driver?: {
     /**

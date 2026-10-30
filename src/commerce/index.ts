@@ -58,6 +58,28 @@ export { deliveryDriverEndpoints } from './driverEndpoints'
 export { releaseOrderRider, transitionOrderFulfillment } from './kitchen'
 export { deliveryOpsEndpoints } from './opsEndpoints'
 export { deliveryOrderEndpoints } from './orderEndpoints'
+export {
+  getDishByID,
+  getRestaurantMenu,
+  listActiveBanners,
+  listRestaurants,
+  mapDish,
+  mapRestaurant,
+} from './catalogue'
+export type {
+  CatalogueBanner,
+  CatalogueDish,
+  CatalogueRestaurant,
+  RestaurantMenu,
+} from './catalogue'
+export { deliveryCatalogueEndpoints } from './catalogueEndpoints'
+export {
+  EXPRESS_RETIRED_NOTICE,
+  EXPO_API_BASE_HINT,
+  EXPO_CUTOVER_ROUTES,
+  resolvePayloadPath,
+} from './cutover'
+export type { CutoverRoute } from './cutover'
 export { getAnalyticsOverview } from './analytics'
 export { reorderBanners, reorderCategories } from './reorder'
 export { searchCatalogue } from './search'

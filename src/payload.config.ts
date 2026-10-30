@@ -25,6 +25,7 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { PlatformSettings } from '@/globals/PlatformSettings'
+import { deliveryCatalogueEndpoints } from '@/commerce/catalogueEndpoints'
 import { deliveryDriverEndpoints } from '@/commerce/driverEndpoints'
 import { deliveryOpsEndpoints } from '@/commerce/opsEndpoints'
 import { plugins } from './plugins'
@@ -84,7 +85,11 @@ export default buildConfig({
     },
   }),
   //email: nodemailerAdapter(),
-  endpoints: [...deliveryDriverEndpoints, ...deliveryOpsEndpoints],
+  endpoints: [
+    ...deliveryCatalogueEndpoints,
+    ...deliveryDriverEndpoints,
+    ...deliveryOpsEndpoints,
+  ],
   globals: [Header, Footer, PlatformSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',

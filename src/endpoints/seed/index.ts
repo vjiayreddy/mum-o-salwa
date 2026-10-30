@@ -313,7 +313,7 @@ export const seed = async ({
             link: {
               type: 'custom',
               appearance: 'default',
-              label: 'Browse shop',
+              label: 'Browse restaurants',
               url: '/shop',
             },
           },
@@ -335,7 +335,7 @@ export const seed = async ({
         {
           link: {
             type: 'custom',
-            label: 'Shop',
+            label: 'Restaurants',
             url: '/shop',
           },
         },

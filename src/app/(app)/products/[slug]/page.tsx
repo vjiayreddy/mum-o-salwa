@@ -109,6 +109,14 @@ export default async function ProductPage({ params }: Args) {
   const relatedProducts =
     product.relatedProducts?.filter((relatedProduct) => typeof relatedProduct === 'object') ?? []
 
+  const restaurant =
+    product.tenant && typeof product.tenant === 'object' ? product.tenant : null
+  const restaurantHref =
+    restaurant?.slug != null && restaurant.slug !== ''
+      ? `/shop/${restaurant.slug}`
+      : '/shop'
+  const backLabel = restaurant?.name ? restaurant.name : 'All restaurants'
+
   return (
     <React.Fragment>
       <script
@@ -119,9 +127,9 @@ export default async function ProductPage({ params }: Args) {
       />
       <div className="container pt-8 pb-8">
         <Button asChild variant="ghost" className="mb-4">
-          <Link href="/shop">
+          <Link href={restaurantHref}>
             <ChevronLeftIcon />
-            All products
+            {backLabel}
           </Link>
         </Button>
         <div className="flex flex-col gap-12 rounded-lg border p-8 md:py-12 lg:flex-row lg:gap-8 bg-primary-foreground">
