@@ -25,6 +25,7 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { PlatformSettings } from '@/globals/PlatformSettings'
+import { deliveryDriverEndpoints } from '@/commerce/driverEndpoints'
 import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
@@ -82,7 +83,7 @@ export default buildConfig({
     },
   }),
   //email: nodemailerAdapter(),
-  endpoints: [],
+  endpoints: [...deliveryDriverEndpoints],
   globals: [Header, Footer, PlatformSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',

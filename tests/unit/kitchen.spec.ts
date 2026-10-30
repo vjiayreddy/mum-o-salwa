@@ -25,11 +25,13 @@ describe('canKitchenTransition', () => {
 })
 
 describe('canSystemTransition', () => {
-  it('allows payment and release-rider moves', () => {
+  it('allows payment, rider, and release-rider moves', () => {
     expect(canSystemTransition('pending_payment', 'confirmed')).toBe(true)
     expect(canSystemTransition('pending_payment', 'payment_failed')).toBe(true)
     expect(canSystemTransition('payment_failed', 'confirmed')).toBe(true)
+    expect(canSystemTransition('ready', 'out_for_delivery')).toBe(true)
     expect(canSystemTransition('out_for_delivery', 'ready')).toBe(true)
+    expect(canSystemTransition('out_for_delivery', 'delivered')).toBe(true)
   })
 })
 

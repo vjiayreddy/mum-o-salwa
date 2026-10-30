@@ -29,6 +29,11 @@ const adminUser = {
   roles: ['admin'],
 } as unknown as User
 
+const driverUser = {
+  id: 'driver-1',
+  roles: ['driver'],
+} as unknown as User
+
 describe('getRestaurantTenantIDs', () => {
   it('returns all memberships', () => {
     expect(getRestaurantTenantIDs(restaurantUser)).toEqual(['tenant-a', 'tenant-b'])
@@ -67,6 +72,26 @@ describe('access helpers', () => {
       or: [
         { customer: { equals: 'user-1' } },
         { tenant: { in: ['tenant-a', 'tenant-b'] } },
+      ],
+    })
+  })
+
+  it('order read lets drivers see the ready queue and their claimed jobs', () => {
+    expect(adminCustomerOrRestaurantOrder({ req: { user: driverUser } } as never)).toEqual({
+      or: [
+        { customer: { equals: 'driver-1' } },
+        {
+          and: [
+            { fulfillmentStatus: { equals: 'ready' } },
+            {
+              or: [
+                { 'driver.user': { exists: false } },
+                { 'driver.user': { equals: null } },
+              ],
+            },
+          ],
+        },
+        { 'driver.user': { equals: 'driver-1' } },
       ],
     })
   })

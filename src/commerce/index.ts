@@ -40,6 +40,21 @@ export type {
   LatLng,
   RestaurantFees,
 } from './money'
+export {
+  assertApprovedDriver,
+  assertDriverActor,
+  claimDelivery,
+  completeDelivery,
+  findDelivery,
+  getDriverHome,
+  listMyDeliveries,
+  listReadyDeliveries,
+  pickUpDelivery,
+  setDriverOnline,
+  todayEarnings,
+} from './driver'
+export type { DeliveryPayload, DriverHome, DriverSummary } from './driver'
+export { deliveryDriverEndpoints } from './driverEndpoints'
 export { releaseOrderRider, transitionOrderFulfillment } from './kitchen'
 export { deliveryOrderEndpoints } from './orderEndpoints'
 export { deliveryOrderFields, mapDeliveryOrderFields } from './orderFields'
@@ -50,9 +65,12 @@ export {
 } from './orderHooks'
 export {
   appendStatusHistory,
+  applyClaimDelivery,
+  applyCompleteDelivery,
   applyKitchenTransition,
   applyPaymentFailed,
   applyPaymentSucceeded,
+  applyPickupDelivery,
   applyReleaseRider,
   canKitchenTransition,
   canReleaseRider,
@@ -60,8 +78,12 @@ export {
   FULFILLMENT_STATUSES,
   generateOrderReference,
   newDeliveryCode,
+  orderDriverID,
+  orderHasDriver,
 } from './orderStatus'
 export type {
+  DriverPayoutSnapshot,
+  DriverSnapshot,
   FulfillmentStatus,
   PluginOrderStatus,
   StatusHistoryEntry,
