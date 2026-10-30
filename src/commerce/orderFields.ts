@@ -48,6 +48,30 @@ const orderItemSnapshotFields: Field[] = [
 /** Extra delivery fields appended to the plugin orders collection. */
 export const deliveryOrderFields: Field[] = [
   {
+    // Not the multi-tenant plugin field — customers are not restaurant members, so
+    // plugin Assigned Tenant / tenants-collection access would reject confirm-order.
+    name: 'tenant',
+    type: 'relationship',
+    relationTo: 'tenants',
+    index: true,
+    required: true,
+    // Bypass default relationship filterOptions checks (customer ≠ tenant member).
+    filterOptions: () => true,
+    validate: (value) => {
+      if (value == null || value === '') return 'Restaurant is required on the order'
+      return true
+    },
+    admin: {
+      description: 'Restaurant for this order (auto-set from cart dishes at checkout).',
+      position: 'sidebar',
+    },
+    access: {
+      create: () => true,
+      read: () => true,
+      update: ({ req }) => checkRole(['admin', 'restaurant'], req.user as User | null),
+    },
+  },
+  {
     name: 'reference',
     type: 'text',
     unique: true,

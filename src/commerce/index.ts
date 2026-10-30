@@ -102,6 +102,12 @@ export {
   orderBeforeValidateDefaults,
 } from './orderHooks'
 export {
+  productIDsFromOrderItems,
+  relationID,
+  tenantIDFromPopulatedProduct,
+  tenantIDFromProductMap,
+} from './orderTenant'
+export {
   appendStatusHistory,
   applyClaimDelivery,
   applyCompleteDelivery,

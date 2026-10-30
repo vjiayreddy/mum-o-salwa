@@ -3,6 +3,7 @@ import {
   type CollectionAfterChangeHook,
   type CollectionBeforeChangeHook,
   type CollectionBeforeValidateHook,
+  type PayloadRequest,
 } from 'payload'
 
 import {
@@ -14,6 +15,58 @@ import {
   type FulfillmentStatus,
   type StatusHistoryEntry,
 } from '@/commerce/orderStatus'
+import {
+  productIDsFromOrderItems,
+  relationID,
+  tenantIDFromPopulatedProduct,
+  tenantIDFromProductMap,
+} from '@/commerce/orderTenant'
+
+type OrderItemLike = { product?: unknown }
+
+/**
+ * Plugin confirm-order never sets multi-tenant `tenant`. Infer it from line items
+ * so Assigned Tenant validation succeeds for customer checkout.
+ */
+const ensureOrderTenant = async (
+  data: Record<string, unknown>,
+  req: PayloadRequest,
+): Promise<void> => {
+  if (relationID(data.tenant)) return
+
+  const items = data.items as OrderItemLike[] | null | undefined
+  if (!items?.length) return
+
+  for (const item of items) {
+    const fromPopulated = tenantIDFromPopulatedProduct(item.product)
+    if (fromPopulated) {
+      data.tenant = fromPopulated
+      return
+    }
+  }
+
+  const productIDs = productIDsFromOrderItems(items)
+  if (productIDs.length === 0) return
+
+  const products = await req.payload.find({
+    collection: 'products',
+    depth: 0,
+    limit: productIDs.length,
+    overrideAccess: true,
+    pagination: false,
+    req,
+    where: { id: { in: productIDs } },
+  })
+
+  const tenantByProductID = new Map<string, string>()
+  for (const product of products.docs) {
+    const tenantID = relationID(product.tenant)
+    if (tenantID) tenantByProductID.set(String(product.id), tenantID)
+  }
+
+  const tenantID = tenantIDFromProductMap(productIDs, tenantByProductID)
+  if (tenantID) data.tenant = tenantID
+}
 
 /**
  * Ensure every order has a delivery code + human reference, including orders
@@ -25,6 +78,8 @@ export const orderBeforeValidateDefaults: CollectionBeforeValidateHook = async (
   req,
 }) => {
   if (!data) return data
+
+  await ensureOrderTenant(data as Record<string, unknown>, req)
 
   if (!data.deliveryCode) {
     data.deliveryCode = newDeliveryCode()

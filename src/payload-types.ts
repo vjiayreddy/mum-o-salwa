@@ -265,7 +265,6 @@ export interface User {
  */
 export interface Order {
   id: string;
-  tenant?: (string | null) | Tenant;
   items?:
     | {
         product?: (string | null) | Product;
@@ -317,6 +316,10 @@ export interface Order {
   status?: OrderStatus;
   amount?: number | null;
   currency?: 'USD' | null;
+  /**
+   * Restaurant for this order (auto-set from cart dishes at checkout).
+   */
+  tenant: string | Tenant;
   /**
    * Short customer-facing reference (e.g. CH-2481).
    */
@@ -444,6 +447,101 @@ export interface Order {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "products".
+ */
+export interface Product {
+  id: string;
+  tenant?: (string | null) | Tenant;
+  title: string;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  gallery?:
+    | {
+        image: string | Media;
+        variantOption?: (string | null) | VariantOption;
+        id?: string | null;
+      }[]
+    | null;
+  layout?: (CallToActionBlock | ContentBlock | MediaBlock)[] | null;
+  /**
+   * Menu list group: Popular, Mains, Sides, Drinks, …
+   */
+  section: string;
+  isAvailable?: boolean | null;
+  isPopular?: boolean | null;
+  sortOrder?: number | null;
+  calories?: number | null;
+  /**
+   * e.g. Milk, Gluten, Sesame
+   */
+  allergens?: string[] | null;
+  /**
+   * Add-ons and customizations (size, extras, removals). Priced as deltas from the dish base price.
+   */
+  optionGroups?:
+    | {
+        name: string;
+        type: 'single' | 'multiple';
+        required?: boolean | null;
+        options?:
+          | {
+              name: string;
+              /**
+               * Extra cost in minor units (cents)
+               */
+              priceDelta?: number | null;
+              isDefault?: boolean | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  inventory?: number | null;
+  enableVariants?: boolean | null;
+  variantTypes?: (string | VariantType)[] | null;
+  variants?: {
+    docs?: (string | Variant)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  priceInUSDEnabled?: boolean | null;
+  priceInUSD?: number | null;
+  relatedProducts?: (string | Product)[] | null;
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (string | null) | Media;
+    description?: string | null;
+  };
+  categories?: (string | Category)[] | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  deletedAt?: string | null;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "tenants".
  */
 export interface Tenant {
@@ -568,101 +666,6 @@ export interface Category {
   isActive?: boolean | null;
   updatedAt: string;
   createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "products".
- */
-export interface Product {
-  id: string;
-  tenant?: (string | null) | Tenant;
-  title: string;
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  gallery?:
-    | {
-        image: string | Media;
-        variantOption?: (string | null) | VariantOption;
-        id?: string | null;
-      }[]
-    | null;
-  layout?: (CallToActionBlock | ContentBlock | MediaBlock)[] | null;
-  /**
-   * Menu list group: Popular, Mains, Sides, Drinks, …
-   */
-  section: string;
-  isAvailable?: boolean | null;
-  isPopular?: boolean | null;
-  sortOrder?: number | null;
-  calories?: number | null;
-  /**
-   * e.g. Milk, Gluten, Sesame
-   */
-  allergens?: string[] | null;
-  /**
-   * Add-ons and customizations (size, extras, removals). Priced as deltas from the dish base price.
-   */
-  optionGroups?:
-    | {
-        name: string;
-        type: 'single' | 'multiple';
-        required?: boolean | null;
-        options?:
-          | {
-              name: string;
-              /**
-               * Extra cost in minor units (cents)
-               */
-              priceDelta?: number | null;
-              isDefault?: boolean | null;
-              id?: string | null;
-            }[]
-          | null;
-        id?: string | null;
-      }[]
-    | null;
-  inventory?: number | null;
-  enableVariants?: boolean | null;
-  variantTypes?: (string | VariantType)[] | null;
-  variants?: {
-    docs?: (string | Variant)[];
-    hasNextPage?: boolean;
-    totalDocs?: number;
-  };
-  priceInUSDEnabled?: boolean | null;
-  priceInUSD?: number | null;
-  relatedProducts?: (string | Product)[] | null;
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (string | null) | Media;
-    description?: string | null;
-  };
-  categories?: (string | Category)[] | null;
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  updatedAt: string;
-  createdAt: string;
-  deletedAt?: string | null;
-  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2154,7 +2157,6 @@ export interface CartsSelect<T extends boolean = true> {
  * via the `definition` "orders_select".
  */
 export interface OrdersSelect<T extends boolean = true> {
-  tenant?: T;
   items?:
     | T
     | {
@@ -2190,6 +2192,7 @@ export interface OrdersSelect<T extends boolean = true> {
   status?: T;
   amount?: T;
   currency?: T;
+  tenant?: T;
   reference?: T;
   fulfillmentStatus?: T;
   statusHistory?:

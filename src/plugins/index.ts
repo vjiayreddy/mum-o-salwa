@@ -195,6 +195,7 @@ export const plugins: Plugin[] = [
             type: 'relationship',
             relationTo: 'tenants',
             index: true,
+            filterOptions: () => true,
             admin: {
               position: 'sidebar',
               description: 'Restaurant this basket belongs to (one restaurant per cart).',
@@ -318,12 +319,9 @@ export const plugins: Plugin[] = [
   }),
   multiTenantPlugin<Config>({
     collections: {
-      // Dishes (products) are scoped per restaurant tenant
+      // Dishes only — orders use a custom `tenant` field (see deliveryOrderFields).
+      // Keeping orders here re-applies tenant membership filters that break customer checkout.
       products: {},
-      // Orders carry a tenant field but use custom access (marketplace checkout)
-      orders: {
-        useTenantAccess: false,
-      },
     },
     tenantField: {
       access: {
@@ -347,6 +345,8 @@ export const plugins: Plugin[] = [
         },
       ],
     },
+    // Marketplace: customers must read restaurants; Tenants.ts already sets read: () => true
+    useTenantsCollectionAccess: false,
     userHasAccessToAllTenants: (user) => checkRole(['admin'], user as User | null),
   }),
   s3Storage({
